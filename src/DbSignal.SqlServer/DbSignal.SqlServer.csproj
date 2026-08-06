@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Description>SQL Server change detection for DbSignal, via Change Tracking. Reports which rows changed, no matter which application wrote them. No triggers, no Service Broker.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <ProjectReference Include="..\DbSignal.Abstractions\DbSignal.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

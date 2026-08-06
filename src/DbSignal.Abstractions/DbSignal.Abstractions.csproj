@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0 so a .NET Framework app, or a domain project with a
+         no-dependency rule, can still reference the contract. Providers are net8.0. -->
+    <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
+    <Description>The database-agnostic change-notification contract for .NET. Depends on nothing; implemented by DbSignal provider packages.</Description>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Description>Dependency-injection and background-service wiring for DbSignal. Register a feed and a handler; the library owns the loop, retries and checkpointing.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Abstractions only. A library that references the full Hosting package forces its
+         version choice on every consumer. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <ProjectReference Include="..\DbSignal.Abstractions\DbSignal.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

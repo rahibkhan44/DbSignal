@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- A library, not a test project: providers reference it and inherit its tests. -->
+    <IsTestProject>false</IsTestProject>
+
+    <!-- CA1707 (no underscores in public member names) is correct for a library and wrong
+         for a test suite, where Underscored_Sentence_Names are the point. This project is
+         technically the former and semantically the latter, so the rule is off here only. -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit" />
+    <PackageReference Include="Xunit.SkippableFact" />
+    <PackageReference Include="FluentAssertions" />
+    <ProjectReference Include="..\..\src\DbSignal.Abstractions\DbSignal.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

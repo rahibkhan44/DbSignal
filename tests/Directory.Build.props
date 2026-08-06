@@ -1,0 +1,19 @@
+<Project>
+
+  <!-- Inherit the repo-wide settings, then relax what only makes sense for shipping libraries. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TargetFramework>net8.0</TargetFramework>
+
+    <!-- CA1707 forbids underscores in member names. Correct for a shipping library,
+         wrong for tests, where Underscored_Sentence_Names ARE the documentation.
+         CA1711 forbids type names ending in 'Collection' — but xUnit's own convention for
+         a [CollectionDefinition] class is exactly that, and matching the framework beats
+         matching the analyzer. -->
+    <NoWarn>$(NoWarn);CA1707;CA1711</NoWarn>
+  </PropertyGroup>
+
+</Project>

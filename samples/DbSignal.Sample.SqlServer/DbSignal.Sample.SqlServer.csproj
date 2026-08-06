@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <ProjectReference Include="..\..\src\DbSignal.SqlServer\DbSignal.SqlServer.csproj" />
+  </ItemGroup>
+
+</Project>

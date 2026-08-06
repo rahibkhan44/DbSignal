@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Description>SQLite change detection for DbSignal, via PRAGMA data_version. Detects writes made by other processes — external tools, scripts, a second application — with no schema changes and no setup.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <ProjectReference Include="..\DbSignal.Abstractions\DbSignal.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
