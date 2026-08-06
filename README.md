@@ -47,6 +47,27 @@ A provider is listed as working only when the shared conformance suite passes ag
 real running instance of that database. Nothing here is claimed on the strength of a
 design document.
 
+## Using it in an application
+
+[![nuget](https://img.shields.io/nuget/v/DbSignal.Extensions.Hosting?label=DbSignal.Extensions.Hosting)](https://www.nuget.org/packages/DbSignal.Extensions.Hosting)
+
+```csharp
+builder.Services.AddDbSignal(o =>
+{
+    o.UseFeed(_ => SqlServerFeed.For(connectionString).Watch("dbo.Products").Build());
+    o.RequireAtLeast(ChangeDetail.KeysChanged);
+})
+.AddHandler<ProductCacheInvalidator>();
+```
+
+The hosted service owns the loop: it dispatches each batch to your handlers from a fresh DI
+scope, **saves the checkpoint only after they succeed**, retries with capped exponential
+backoff when the feed faults, and turns retention expiry into a loud warning rather than
+silence. One handler throwing does not stop the others.
+
+It references no database driver — `UseFeed` takes a factory, so adding a provider never
+widens this package's dependencies.
+
 ## The design decision everything rests on
 
 **Databases are not equally good at this, and the library refuses to pretend otherwise.**

@@ -20,7 +20,7 @@ namespace DbSignal.Hosting;
 /// unit of work — behave as they would in a web request.
 /// </para>
 /// </remarks>
-internal sealed class ChangeFeedHostedService : BackgroundService
+internal sealed partial class ChangeFeedHostedService : BackgroundService
 {
     private readonly IChangeFeed _feed;
     private readonly DbSignalOptions _options;
@@ -51,8 +51,7 @@ internal sealed class ChangeFeedHostedService : BackgroundService
             _feed.Capabilities.Require(required, _feed.ProviderName);
         }
 
-        _logger.LogInformation(
-            "DbSignal watching via {Provider} ({Detail}, durable: {Durable})",
+        LogWatching(
             _feed.ProviderName, _feed.Capabilities.Detail, _feed.Capabilities.DurableAcrossRestart);
 
         var delay = _options.InitialRetryDelay;
@@ -75,17 +74,14 @@ internal sealed class ChangeFeedHostedService : BackgroundService
                 // The gap is unreadable, so there is nothing to retry into. Say so at
                 // warning level — consumers holding a cache need to reload it — and
                 // restart from the present rather than silently delivering nothing.
-                _logger.LogWarning(ex,
-                    "DbSignal fell outside the change-retention window and cannot enumerate what it missed. " +
-                    "Resuming from now; reload any cached data in full.");
+                LogResyncRequired(ex);
 
                 await _checkpoints.SaveAsync(_options.CheckpointKey, Checkpoint.Now, CancellationToken.None)
                                   .ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
-                    "DbSignal feed faulted; retrying in {Delay}", delay);
+                LogFaulted(ex, delay);
             }
 
             try
@@ -139,9 +135,7 @@ internal sealed class ChangeFeedHostedService : BackgroundService
 
         if (handlers.Count == 0)
         {
-            _logger.LogWarning(
-                "DbSignal detected a change but no IChangeHandler is registered — nothing will react. " +
-                "Register one with AddHandler<T>().");
+            LogNoHandlers();
             return true;
         }
 
@@ -160,13 +154,42 @@ internal sealed class ChangeFeedHostedService : BackgroundService
             catch (Exception ex)
             {
                 // One bad handler must not stop the others from seeing the batch.
-                _logger.LogError(ex,
-                    "Handler {Handler} threw while processing {Batch}",
-                    handler.GetType().Name, batch);
+                LogHandlerFaulted(ex, handler.GetType().Name, batch.Position);
                 allSucceeded = false;
             }
         }
 
         return allSucceeded;
     }
+
+    // Source-generated log delegates. The analyzer insists (CA1848), and it is right to:
+    // these are on the hot path of a loop that runs for the process lifetime, and the
+    // generated code skips formatting entirely when the level is disabled.
+
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "DbSignal watching via {provider} ({detail}, durable across restart: {durable})")]
+    private partial void LogWatching(string provider, ChangeDetail detail, bool durable);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "DbSignal fell outside the change-retention window and cannot enumerate what it missed. " +
+                  "Resuming from now; reload any cached data in full.")]
+    private partial void LogResyncRequired(Exception ex);
+
+    [LoggerMessage(
+        Level = LogLevel.Error,
+        Message = "DbSignal feed faulted; retrying in {delay}")]
+    private partial void LogFaulted(Exception ex, TimeSpan delay);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "DbSignal detected a change but no IChangeHandler is registered — nothing will react. " +
+                  "Register one with AddHandler<T>().")]
+    private partial void LogNoHandlers();
+
+    [LoggerMessage(
+        Level = LogLevel.Error,
+        Message = "Handler {handler} threw while processing the batch at {position}")]
+    private partial void LogHandlerFaulted(Exception ex, string handler, Checkpoint position);
 }
