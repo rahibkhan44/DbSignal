@@ -1,0 +1,60 @@
+name: release
+
+# Publishes to nuget.org via Trusted Publishing (OIDC) — no stored API key.
+# The nuget.org policy is bound to this file's name; renaming it breaks publishing.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 0.1.0'
+        required: true
+
+jobs:
+  publish:
+    # windows-latest so the SQL Server suite runs against LocalDB before anything ships.
+    runs-on: windows-latest
+    permissions:
+      id-token: write   # required: lets GitHub mint the OIDC token nuget.org exchanges for a key
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            v="${{ inputs.version }}"
+          else
+            v="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Publishing version $v"
+
+      - run: dotnet build DbSignal.sln -c Release -p:Version=${{ steps.ver.outputs.version }}
+
+      # Never publish something the conformance suite has not passed.
+      - run: dotnet test DbSignal.sln -c Release --no-build
+
+      - run: dotnet pack DbSignal.sln -c Release --no-build -o ./artifacts -p:Version=${{ steps.ver.outputs.version }}
+
+      # Ask for the key immediately before pushing — it is only valid for 1 hour.
+      - name: NuGet login (OIDC to short-lived key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push packages
+        shell: bash
+        run: >
+          dotnet nuget push "./artifacts/*.nupkg"
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
