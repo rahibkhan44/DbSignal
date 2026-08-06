@@ -1,6 +1,10 @@
 # DbSignal
 
 [![ci](https://github.com/rahibkhan44/DbSignal/actions/workflows/ci.yml/badge.svg)](https://github.com/rahibkhan44/DbSignal/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/DbSignal.Abstractions?logo=nuget&label=nuget)](https://www.nuget.org/packages/DbSignal.Abstractions)
+[![Downloads](https://img.shields.io/nuget/dt/DbSignal.Abstractions?label=downloads)](https://www.nuget.org/packages/DbSignal.Abstractions)
+[![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20netstandard2.0-512BD4)](https://www.nuget.org/packages/DbSignal.Abstractions)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **Know when someone else changed your database.**
 
@@ -28,12 +32,12 @@ Switching database is meant to be one line — `SqliteFeed.For(...)` becomes
 
 **Early. Two providers, both proven.**
 
-| Provider | Mechanism | Detail | Status |
-|---|---|---|---|
-| **SQLite** | `PRAGMA data_version` | `DatabaseChanged` | ✅ 15 tests green |
-| **SQL Server** | Change Tracking | `KeysChanged` | ✅ 18 tests green (real LocalDB) |
-| PostgreSQL | logical replication | `RowImages` | planned |
-| MySQL | binlog | `RowImages` | planned |
+| Provider | Package | Mechanism | Detail | Status |
+|---|---|---|---|---|
+| **SQLite** | [![nuget](https://img.shields.io/nuget/v/DbSignal.Sqlite?label=DbSignal.Sqlite)](https://www.nuget.org/packages/DbSignal.Sqlite) | `PRAGMA data_version` | `DatabaseChanged` | ✅ 15 tests green |
+| **SQL Server** | [![nuget](https://img.shields.io/nuget/v/DbSignal.SqlServer?label=DbSignal.SqlServer)](https://www.nuget.org/packages/DbSignal.SqlServer) | Change Tracking | `KeysChanged` | ✅ 19 tests green (real LocalDB) |
+| PostgreSQL | — | logical replication | `RowImages` | planned |
+| MySQL | — | binlog | `RowImages` | planned |
 
 The same conformance suite runs against both, unbent — no provider-specific exemptions.
 SQLite polls one integer and can only say "something changed"; SQL Server queries change
