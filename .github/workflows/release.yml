@@ -51,10 +51,21 @@ jobs:
         with:
           user: ${{ secrets.NUGET_USER }}
 
+      # Push one at a time: dotnet's own globbing does not resolve on Windows, and a
+      # quoted wildcard reaches it as a literal. Each .snupkg goes up with its .nupkg.
       - name: Push packages
         shell: bash
-        run: >
-          dotnet nuget push "./artifacts/*.nupkg"
-          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
-          --source https://api.nuget.org/v3/index.json
-          --skip-duplicate
+        run: |
+          shopt -s nullglob
+          packages=(./artifacts/*.nupkg)
+          if [ ${#packages[@]} -eq 0 ]; then
+            echo "No packages found in ./artifacts — nothing to publish."
+            exit 1
+          fi
+          for pkg in "${packages[@]}"; do
+            echo "Pushing $pkg"
+            dotnet nuget push "$pkg" \
+              --api-key ${{ steps.login.outputs.NUGET_API_KEY }} \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
