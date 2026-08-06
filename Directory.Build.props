@@ -20,7 +20,7 @@
 
   <!-- Package identity. Per-project files override Description/PackageTags. -->
   <PropertyGroup>
-    <Authors>DbSignal contributors</Authors>
+    <Authors>Rahib Khan</Authors>
     <Product>DbSignal</Product>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/rahibkhan44/DbSignal</PackageProjectUrl>
