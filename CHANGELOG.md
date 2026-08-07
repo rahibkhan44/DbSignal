@@ -9,9 +9,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.3.0] — 2026-08-07
+## [1.0.0] — 2026-08-07
 
-Packaging and discoverability. **No API changes**; upgrading is safe.
+**First stable release.** The API has now shipped twice, been consumed by a production
+application, and is proven by one conformance suite running unchanged against two engines
+that work nothing alike. `IChangeFeed` is stable from here — breaking it means 2.0.0.
+
+No code changes since 0.2.0; this release is packaging and discoverability plus the
+commitment that comes with a 1.0.
 
 ### Added
 - Package icon, shared by all four packages.
@@ -63,7 +68,7 @@ First release.
 - Delivery is **at-least-once**. Handlers must be idempotent. Exactly-once is not
   achievable across these mechanisms, and claiming it would be untrue.
 
-[Unreleased]: https://github.com/rahibkhan44/DbSignal/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/rahibkhan44/DbSignal/compare/v0.2.0...v0.3.0
+[Unreleased]: https://github.com/rahibkhan44/DbSignal/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/rahibkhan44/DbSignal/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/rahibkhan44/DbSignal/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rahibkhan44/DbSignal/releases/tag/v0.1.0
