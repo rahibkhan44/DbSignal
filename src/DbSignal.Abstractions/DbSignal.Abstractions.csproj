@@ -5,6 +5,7 @@
          no-dependency rule, can still reference the contract. Providers are net8.0. -->
     <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
     <Description>The database-agnostic change-notification contract for .NET. Depends on nothing; implemented by DbSignal provider packages.</Description>
+    <PackageTags>$(PackageTags);abstractions;contract;iasyncenumerable</PackageTags>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">

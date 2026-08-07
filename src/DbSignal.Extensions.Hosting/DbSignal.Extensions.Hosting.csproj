@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Description>Dependency-injection and background-service wiring for DbSignal. Register a feed and a handler; the library owns the loop, retries and checkpointing.</Description>
+    <PackageTags>$(PackageTags);hosting;dependency-injection;ihostedservice;background-service</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

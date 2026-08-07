@@ -18,7 +18,10 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
-  <!-- Package identity. Per-project files override Description/PackageTags. -->
+  <!-- Package identity. Each src project APPENDS its own engine terms to PackageTags
+       ($(PackageTags);sqlite;... etc). Without that, no package is findable by the
+       technology it actually implements — tags and the package ID are the only things
+       nuget.org search matches on. -->
   <PropertyGroup>
     <Authors>Rahib Khan</Authors>
     <Product>DbSignal</Product>
@@ -28,6 +31,14 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>database;change-notification;cdc;change-tracking;cache-invalidation</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
+
+  <!-- One icon, shared by every package. MSBuildThisFileDirectory so it resolves from
+       the repo root regardless of which project is packing. Not Visible, so it does not
+       clutter the solution tree. -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
 
 </Project>

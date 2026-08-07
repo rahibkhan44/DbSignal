@@ -3,6 +3,10 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Description>SQLite change detection for DbSignal, via PRAGMA data_version. Detects writes made by other processes — external tools, scripts, a second application — with no schema changes and no setup.</Description>
+    <!-- Appends to the shared tags in the root Directory.Build.props. Without the
+         engine's own name here, nobody searching "sqlite change notification" finds
+         this package — the package ID is the only other thing search matches on. -->
+    <PackageTags>$(PackageTags);sqlite;data-version;polling</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

@@ -3,6 +3,9 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Description>SQL Server change detection for DbSignal, via Change Tracking. Reports which rows changed, no matter which application wrote them. No triggers, no Service Broker.</Description>
+    <!-- sqldependency/sqltabledependency are deliberate: they are what people search for
+         when the incumbent has just bitten them, and this package is the alternative. -->
+    <PackageTags>$(PackageTags);sqlserver;sql-server;changetable;sqldependency;sqltabledependency</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

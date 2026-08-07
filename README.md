@@ -16,17 +16,50 @@ Every serious database can tell you: SQL Server has Change Tracking, PostgreSQL 
 logical replication, MySQL has the binlog, SQLite has `PRAGMA data_version`. The
 capability exists everywhere. The abstraction didn't.
 
+## Install
+
+```bash
+dotnet add package DbSignal.SqlServer     # or DbSignal.Sqlite
+```
+
+```csharp
+await using var feed = SqlServerFeed.For(connectionString)
+                                    .Watch("dbo.Products")
+                                    .Build();
+
+await foreach (var batch in feed.ReadAsync(Checkpoint.Now, ct))
+    foreach (var table in batch.Tables)
+        foreach (var key in table.Keys)
+            Console.WriteLine($"{key.Kind} row {key.Values[0]} in {table.QualifiedName}");
+```
+
+That reports rows changed by **any** writer — another application, an ETL job, someone in
+SSMS — not just changes your own code made.
+
+**Switching database is one line.** `SqlServerFeed.For(...)` becomes
+`SqliteFeed.For(...)` and nothing else moves:
+
 ```csharp
 await using var feed = SqliteFeed.For("Data Source=app.db").Build();
 
 await foreach (var batch in feed.ReadAsync(Checkpoint.Now, ct))
-{
     Console.WriteLine($"Something changed at {batch.ObservedUtc:HH:mm:ss}");
-}
 ```
 
-Switching database is meant to be one line — `SqliteFeed.For(...)` becomes
-`SqlServerFeed.For(...)` and nothing else moves.
+Note the second example prints less — deliberately. SQLite can only say *that* the
+database changed, and the library won't pretend otherwise. See
+[the design decision](#the-design-decision-everything-rests-on).
+
+### Packages
+
+| Package | What it's for |
+|---|---|
+| [`DbSignal.SqlServer`](https://www.nuget.org/packages/DbSignal.SqlServer) | SQL Server, via Change Tracking |
+| [`DbSignal.Sqlite`](https://www.nuget.org/packages/DbSignal.Sqlite) | SQLite, via `PRAGMA data_version` |
+| [`DbSignal.Extensions.Hosting`](https://www.nuget.org/packages/DbSignal.Extensions.Hosting) | `AddDbSignal(...)` + a background service that owns the loop |
+| [`DbSignal.Abstractions`](https://www.nuget.org/packages/DbSignal.Abstractions) | The contract. Pulled in automatically; reference directly only to implement a provider |
+
+Release history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Status
 
