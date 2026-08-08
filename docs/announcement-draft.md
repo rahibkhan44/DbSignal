@@ -1,8 +1,41 @@
-# Your app doesn't know when another program changed your database
-
-*Draft for dev.to / blog. Delete this file once published.*
-
 ---
+title: Your app doesn't know when another program changed your database
+published: false
+description: Every database can already tell you when something changed. .NET had no unified way to ask. Here is what I found when I went looking, and what I built instead.
+tags: dotnet, csharp, database, sqlserver
+cover_image:
+canonical_url:
+---
+
+<!--
+POSTING NOTES — delete this block before publishing.
+
+  1. Set `published: true` when ready.
+  2. Add a cover image, and ideally a GIF of the before/after near the top:
+     a grid that does not update on an external INSERT, then the same
+     INSERT updating it. That single image is worth more than any
+     paragraph here.
+  3. dev.to allows 4 tags maximum; the four above are chosen.
+  4. If cross-posting, publish on your own blog first and set
+     canonical_url so the original gets the search credit.
+
+  Cross-post titles:
+    r/dotnet   Your app doesn't know when another program changed your
+               database — so I wrote the library that tells it
+    HN         Show HN: DbSignal – database change notification for .NET,
+               without Kafka
+
+  Opening comment for both — lead with the honest limitation, it earns
+  more goodwill than a feature list:
+
+    "Two providers so far, SQL Server and SQLite, and I only list a
+     provider once the shared conformance suite passes against a real
+     running instance of it. Postgres and MySQL are designed but not
+     written. Happy to answer anything about the capability model — it
+     is the part I am least sure I got right."
+
+  Then delete this file from the repo.
+-->
 
 There's a bug in almost every line-of-business app I've worked on, and most teams never
 file it as a bug. It looks like this:
