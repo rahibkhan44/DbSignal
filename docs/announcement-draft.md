@@ -77,12 +77,15 @@ database, at which point it silently stops working. Ours did exactly this. An ER
 directly stamped nothing, so no workstation ever learned. Nothing errored. It just quietly
 never happened.
 
-That scheme had a second cost I didn't appreciate until I went to remove it:
+That scheme had a second cost I only noticed when I costed up what replacing it would take:
 `ExecuteUpdate` and `ExecuteDelete` **bypass EF Core interceptors entirely**. So every
 set-based write had to remember to stamp by hand. That codebase had 19 manual stamp calls
 across 26 bulk-write sites, and a 673-line convention test whose entire job was catching
-the ones developers forgot. Hundreds of lines of machinery to work around one thing EF
+the ones developers forgot — hundreds of lines of machinery to work around one thing EF
 doesn't intercept.
+
+Change Tracking sits inside the database engine, so it sees those writes regardless. That
+whole category of "did you remember to stamp?" review burden stops being possible.
 
 **`SqlDependency` / `SqlTableDependency`.** The answers you'll find first, and the ones with
 the worst production stories. From documented reports:
