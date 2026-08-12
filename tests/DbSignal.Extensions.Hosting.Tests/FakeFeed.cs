@@ -60,3 +60,38 @@ internal sealed class FakeFeed : IChangeFeed
         yield break;
     }
 }
+
+/// <summary>
+/// An in-memory store that also announces when a particular position lands in it.
+/// </summary>
+/// <remarks>
+/// Tests that involve a retry delay cannot simply start the host and stop it: stopping
+/// cancels the token the delay is waiting on, so the run is cut short and the assertion
+/// reads a half-finished state. Waiting for the save itself is the honest signal that the
+/// work under test actually completed.
+/// </remarks>
+internal sealed class WatchingCheckpointStore : ICheckpointStore
+{
+    private readonly InMemoryCheckpointStore _inner = new();
+    private readonly string _awaited;
+    private readonly TaskCompletionSource<bool> _reached =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public WatchingCheckpointStore(string awaitedPosition) => _awaited = awaitedPosition;
+
+    /// <summary>Completes once <c>awaitedPosition</c> has been saved.</summary>
+    public Task Reached => _reached.Task;
+
+    public Task<Checkpoint?> LoadAsync(string key, CancellationToken ct = default) =>
+        _inner.LoadAsync(key, ct);
+
+    public async Task SaveAsync(string key, Checkpoint checkpoint, CancellationToken ct = default)
+    {
+        await _inner.SaveAsync(key, checkpoint, ct).ConfigureAwait(false);
+
+        if (string.Equals(checkpoint.Value, _awaited, StringComparison.Ordinal))
+        {
+            _reached.TrySetResult(true);
+        }
+    }
+}

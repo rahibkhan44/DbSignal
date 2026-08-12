@@ -9,6 +9,21 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- **`RetryFailedBatches` did not retry, and could skip changes permanently.** When a handler
+  threw, the hosted service left the checkpoint alone and continued the same enumeration,
+  assuming the feed would offer the position again. It does not: both providers advance their
+  cursor before yielding, so the failed batch was never redelivered, and the next successful
+  batch saved a checkpoint *past* it. Those changes became unreachable even across a restart,
+  which broke the at-least-once guarantee. A failed batch is now redelivered from memory, with
+  backoff, and the checkpoint does not move until a handler accepts it.
+
+  The existing test missed this because its feed yielded a single batch and completed, so no
+  later batch could advance the checkpoint. Regression tests now cover two batches, a retry
+  that eventually succeeds, and the `RetryFailedBatches = false` drop.
+
+  Reported by Ivan Rossouw.
+
 ## [1.0.0] — 2026-08-07
 
 **First stable release.** The API has now shipped twice, been consumed by a production

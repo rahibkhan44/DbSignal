@@ -112,19 +112,53 @@ internal sealed partial class ChangeFeedHostedService : BackgroundService
 
         await foreach (var batch in _feed.ReadAsync(from, ct).ConfigureAwait(false))
         {
-            var handled = await DispatchAsync(batch, ct).ConfigureAwait(false);
-
-            if (!handled && _options.RetryFailedBatches)
-            {
-                // Leave the checkpoint where it was so the next pass sees this batch again.
-                continue;
-            }
+            await DeliverAsync(batch, ct).ConfigureAwait(false);
 
             if (_feed.Capabilities.DurableAcrossRestart)
             {
                 await _checkpoints.SaveAsync(_options.CheckpointKey, batch.Position, ct)
                                   .ConfigureAwait(false);
             }
+        }
+    }
+
+    /// <summary>
+    /// Hands a batch to the handlers, redelivering the same batch until it succeeds when
+    /// <see cref="DbSignalOptions.RetryFailedBatches"/> is set.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Retrying has to redeliver <em>this</em> object rather than wait for the feed to
+    /// offer the position again. A provider advances its own cursor as it yields, so the
+    /// next batch off the stream covers only what happened after this one. Skipping ahead
+    /// and then saving that later position would step the checkpoint over changes no
+    /// handler ever accepted, which is precisely the silent loss at-least-once exists to
+    /// prevent.
+    /// </para>
+    /// <para>
+    /// The loop is unbounded on purpose. A batch that never succeeds blocks the stream,
+    /// which is the documented cost of <c>RetryFailedBatches = true</c>, and the option
+    /// exists to buy out of it. Backoff keeps a persistently failing handler from spinning.
+    /// </para>
+    /// </remarks>
+    private async Task DeliverAsync(ChangeBatch batch, CancellationToken ct)
+    {
+        var delay = _options.InitialRetryDelay;
+
+        while (true)
+        {
+            if (await DispatchAsync(batch, ct).ConfigureAwait(false) || !_options.RetryFailedBatches)
+            {
+                return;
+            }
+
+            LogRetryingBatch(batch.Position, delay);
+
+            await Task.Delay(delay, ct).ConfigureAwait(false);
+
+            delay = delay >= _options.MaxRetryDelay
+                ? _options.MaxRetryDelay
+                : TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, _options.MaxRetryDelay.Ticks));
         }
     }
 
@@ -192,4 +226,10 @@ internal sealed partial class ChangeFeedHostedService : BackgroundService
         Level = LogLevel.Error,
         Message = "Handler {handler} threw while processing the batch at {position}")]
     private partial void LogHandlerFaulted(Exception ex, string handler, Checkpoint position);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "DbSignal is redelivering the batch at {position} in {delay}; the checkpoint " +
+                  "stays put until a handler accepts it, so the stream is held here")]
+    private partial void LogRetryingBatch(Checkpoint position, TimeSpan delay);
 }

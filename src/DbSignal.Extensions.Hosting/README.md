@@ -61,9 +61,14 @@ never dictates your driver version.
 
 Delivery is **at-least-once**. A crash between handling a batch and persisting its checkpoint
 replays that batch. One handler throwing does not stop its siblings from seeing the batch, and
-by default the checkpoint does not advance so the batch is retried — set
-`RetryFailedBatches = false` if a poison batch blocking the stream would be worse than
-dropping it.
+by default that batch is delivered again — with backoff, and with the checkpoint held where it
+is — until a handler accepts it. Set `RetryFailedBatches = false` if a poison batch blocking
+the stream would be worse than dropping it.
+
+Retrying holds the stream at the failed batch rather than reading past it. It has to: a
+provider advances its own cursor as it yields, so the next batch off the feed covers only what
+happened afterwards. Reading on and then saving that later position would carry the checkpoint
+over changes no handler ever accepted, and no restart could reach them again.
 
 Checkpoints are kept in memory unless you supply a store with `UseCheckpointStore<T>()`.
 Deliberately not a file by default: writing checkpoints somewhere you did not choose shows up

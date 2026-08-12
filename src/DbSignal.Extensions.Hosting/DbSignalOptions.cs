@@ -20,9 +20,9 @@ public sealed class DbSignalOptions
     public Checkpoint StartAt { get; set; } = Checkpoint.Now;
 
     /// <summary>
-    /// How long to wait before reconnecting after the feed faults. Doubles on repeated
-    /// failures up to <see cref="MaxRetryDelay"/>, so a database that is down does not get
-    /// hammered by every workstation at once.
+    /// How long to wait before reconnecting after the feed faults, and before redelivering a
+    /// batch a handler rejected. Doubles on repeated failures up to <see cref="MaxRetryDelay"/>,
+    /// so a database that is down does not get hammered by every workstation at once.
     /// </summary>
     public TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromSeconds(1);
 
@@ -30,13 +30,21 @@ public sealed class DbSignalOptions
     public TimeSpan MaxRetryDelay { get; set; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
-    /// Whether a handler throwing should stop the checkpoint advancing, so the batch is
-    /// retried on the next pass.
+    /// Whether a batch a handler threw on should be delivered again, holding the stream and
+    /// the checkpoint at that batch until it is accepted.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Default <see langword="true"/>: at-least-once means a failed handler should see the
     /// batch again rather than have it silently dropped. Set false when a poison batch
     /// blocking the stream would be worse than losing it.
+    /// </para>
+    /// <para>
+    /// Retrying redelivers the batch already in hand. Waiting for the feed to offer it again
+    /// would not work: providers advance their cursor as they yield, so the next batch covers
+    /// only later changes, and saving its position would carry the checkpoint over changes
+    /// nothing ever handled.
+    /// </para>
     /// </remarks>
     public bool RetryFailedBatches { get; set; } = true;
 
