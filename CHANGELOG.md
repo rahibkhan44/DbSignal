@@ -9,6 +9,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-08-12
+
+Ships the first externally-reported bug fix. **Upgrade if you use
+`DbSignal.Extensions.Hosting`** — 1.0.0 can lose changes when a handler throws.
+
 ### Fixed
 - **`RetryFailedBatches` did not retry, and could skip changes permanently.** When a handler
   threw, the hosted service left the checkpoint alone and continued the same enumeration,
@@ -83,7 +88,8 @@ First release.
 - Delivery is **at-least-once**. Handlers must be idempotent. Exactly-once is not
   achievable across these mechanisms, and claiming it would be untrue.
 
-[Unreleased]: https://github.com/rahibkhan44/DbSignal/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/rahibkhan44/DbSignal/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/rahibkhan44/DbSignal/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/rahibkhan44/DbSignal/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/rahibkhan44/DbSignal/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rahibkhan44/DbSignal/releases/tag/v0.1.0
