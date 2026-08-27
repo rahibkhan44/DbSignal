@@ -3,13 +3,14 @@ name: release
 # Publishes to nuget.org via Trusted Publishing (OIDC) — no stored API key.
 # The nuget.org policy is bound to this file's name; renaming it breaks publishing.
 
+# One trigger, deliberately. This workflow now creates the tag itself (see the last
+# step), so a `push: tags: ['v*']` trigger would make every release fire a second,
+# duplicate run of itself.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to publish, e.g. 0.1.0'
+        description: 'Version to publish, e.g. 1.0.2'
         required: true
 
 jobs:
@@ -18,7 +19,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       id-token: write   # required: lets GitHub mint the OIDC token nuget.org exchanges for a key
-      contents: read
+      contents: write   # required: the tag and GitHub Release created at the end
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -29,11 +30,7 @@ jobs:
         id: ver
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            v="${{ inputs.version }}"
-          else
-            v="${GITHUB_REF_NAME#v}"
-          fi
+          v="${{ inputs.version }}"
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "Publishing version $v"
 
@@ -69,3 +66,41 @@ jobs:
               --source https://api.nuget.org/v3/index.json \
               --skip-duplicate
           done
+
+      # Tag and release LAST, only once nuget.org has accepted every package.
+      #
+      # This step exists because it did not, and 1.0.0, 1.0.1 and 1.0.2 all shipped to
+      # nuget.org with no git tag and no GitHub Release behind them. Nothing failed. The
+      # repository simply looked abandoned at v0.2.0 to anyone who visited it, and every
+      # `compare/v1.0.1...v1.0.2` link in the CHANGELOG pointed at a tag that did not exist.
+      - name: Tag and publish the GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists — leaving it alone."
+            exit 0
+          fi
+
+          git tag -a "v$VERSION" -m "v$VERSION"
+          git push origin "v$VERSION"
+
+          # The CHANGELOG section for this version, if there is one. Release notes that
+          # duplicate the changelog by hand drift from it; extracting means they cannot.
+          notes=$(awk -v h="## [$VERSION]" '
+            index($0, h) == 1        { found = 1; next }
+            found && index($0, "## [") == 1 { exit }
+            found                    { print }
+          ' CHANGELOG.md)
+
+          if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
+            notes="Published to nuget.org. See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)."
+          fi
+
+          printf '%s
+' "$notes" > release-notes.md
+          gh release create "v$VERSION" --title "$VERSION" --notes-file release-notes.md --latest
