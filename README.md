@@ -19,7 +19,7 @@ capability exists everywhere. The abstraction didn't.
 ## Install
 
 ```bash
-dotnet add package DbSignal.SqlServer     # or DbSignal.Sqlite
+dotnet add package DbSignal.SqlServer     # or DbSignal.PostgreSql, or DbSignal.Sqlite
 ```
 
 ```csharp
@@ -55,6 +55,7 @@ database changed, and the library won't pretend otherwise. See
 | Package | What it's for |
 |---|---|
 | [`DbSignal.SqlServer`](https://www.nuget.org/packages/DbSignal.SqlServer) | SQL Server, via Change Tracking |
+| [`DbSignal.PostgreSql`](https://www.nuget.org/packages/DbSignal.PostgreSql) | PostgreSQL, via logical replication — the only one that carries before/after values |
 | [`DbSignal.Sqlite`](https://www.nuget.org/packages/DbSignal.Sqlite) | SQLite, via `PRAGMA data_version` |
 | [`DbSignal.Extensions.Hosting`](https://www.nuget.org/packages/DbSignal.Extensions.Hosting) | `AddDbSignal(...)` + a background service that owns the loop |
 | [`DbSignal.Abstractions`](https://www.nuget.org/packages/DbSignal.Abstractions) | The contract. Pulled in automatically; reference directly only to implement a provider |
@@ -63,18 +64,22 @@ Release history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Status
 
-**Early. Two providers, both proven.**
+**Three providers, all proven — two polling, one streaming.**
 
 | Provider | Package | Mechanism | Detail | Status |
 |---|---|---|---|---|
 | **SQLite** | [![nuget](https://img.shields.io/nuget/v/DbSignal.Sqlite?label=DbSignal.Sqlite)](https://www.nuget.org/packages/DbSignal.Sqlite) | `PRAGMA data_version` | `DatabaseChanged` | ✅ 15 tests green |
 | **SQL Server** | [![nuget](https://img.shields.io/nuget/v/DbSignal.SqlServer?label=DbSignal.SqlServer)](https://www.nuget.org/packages/DbSignal.SqlServer) | Change Tracking | `KeysChanged` | ✅ 19 tests green (real LocalDB) |
-| PostgreSQL | — | logical replication | `RowImages` | planned |
+| **PostgreSQL** | [![nuget](https://img.shields.io/nuget/v/DbSignal.PostgreSql?label=DbSignal.PostgreSql)](https://www.nuget.org/packages/DbSignal.PostgreSql) | logical replication | `RowImages` | ✅ 18 tests green (real server) |
 | MySQL | — | binlog | `RowImages` | planned |
 
-The same conformance suite runs against both, unbent — no provider-specific exemptions.
-SQLite polls one integer and can only say "something changed"; SQL Server queries change
-tables and names individual rows. Both satisfy one contract.
+The same conformance suite runs against all three, unbent — no provider-specific
+exemptions. SQLite polls one integer and can only say "something changed"; SQL Server
+queries change tables and names individual rows; PostgreSQL holds a replication connection
+open, is pushed each transaction as it commits, and reports the rows' values before and
+after. **A streaming feed satisfying the same contract as two polling ones is the evidence
+that the abstraction reaches past polling** — which was the open question when there were
+only two.
 
 A provider is listed as working only when the shared conformance suite passes against a
 real running instance of that database. Nothing here is claimed on the strength of a
@@ -108,8 +113,9 @@ widens this package's dependencies.
 | | SQL Server | SQLite | PostgreSQL | MySQL |
 |---|---|---|---|---|
 | Granularity | table + changed keys | **whole database** | table + full row | table + full row |
+| Delivery | polled | polled | **pushed on commit** | pushed |
 | Survives app restart | yes | **no** | yes | yes |
-| Survives downtime | within retention | **no** | yes | within retention |
+| Survives downtime | within retention | **no** | yes, while the slot lives | within retention |
 | Setup required | `ALTER DATABASE` | **none** | `wal_level=logical` | `binlog_format=ROW` |
 
 A uniform API over that would have to either lie about SQLite or cripple PostgreSQL down

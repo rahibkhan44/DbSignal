@@ -12,6 +12,7 @@
   <ItemGroup Label="Providers — one driver each, never bundled together">
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.11" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageVersion Include="Npgsql" Version="8.0.5" />
   </ItemGroup>
 
   <ItemGroup Label="Hosting — abstractions only, never the full Hosting package">

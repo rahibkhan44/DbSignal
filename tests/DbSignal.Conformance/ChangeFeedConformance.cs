@@ -165,6 +165,22 @@ public abstract class ChangeFeedConformance
             batch.Tables.SelectMany(t => t.Rows).Should().BeEmpty(
                 "before/after images require ChangeDetail.RowImages");
         }
+
+        // The other direction. Every check above catches a provider claiming MORE than it
+        // delivers; without these, a provider claiming the TOP tier is checked by nothing at
+        // all, because each `detail < …` branch is skipped. A feed declaring RowImages could
+        // return empty Keys and Rows forever and pass this entire suite.
+        if (detail >= ChangeDetail.KeysChanged)
+        {
+            batch.Tables.SelectMany(t => t.Keys).Should().NotBeEmpty(
+                "a feed declaring KeysChanged or better must name the rows that changed");
+        }
+
+        if (detail >= ChangeDetail.RowImages)
+        {
+            batch.Tables.SelectMany(t => t.Rows).Should().NotBeEmpty(
+                "a feed declaring RowImages must carry before/after values, not just keys");
+        }
     }
 
     /// <summary>

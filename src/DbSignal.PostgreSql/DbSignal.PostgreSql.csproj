@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Description>PostgreSQL change detection for DbSignal, via logical replication. Streams the rows another application changed, with their before and after values. No triggers, no polling.</Description>
+    <!-- logical-replication/wal/pgoutput are what someone searches for once they know the
+         mechanism; postgres/npgsql are what they search for before they do. -->
+    <PackageTags>$(PackageTags);postgresql;postgres;npgsql;logical-replication;wal;pgoutput</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <ProjectReference Include="..\DbSignal.Abstractions\DbSignal.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

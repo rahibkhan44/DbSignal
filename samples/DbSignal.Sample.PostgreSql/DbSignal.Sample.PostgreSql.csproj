@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <ProjectReference Include="..\..\src\DbSignal.PostgreSql\DbSignal.PostgreSql.csproj" />
+  </ItemGroup>
+
+</Project>
