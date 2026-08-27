@@ -1,8 +1,8 @@
 ---
 title: Your app doesn't know when another program changed your database
 published: false
-description: Every database can already tell you when something changed. .NET had no unified way to ask. Here is what I found when I went looking, and what I built instead.
-tags: dotnet, csharp, database, sqlserver
+description: Every database can already tell you when something changed. .NET had no unified way to ask. Here is what I found when I went looking, what I built instead, and the four bugs that only showed up when I ran it against a real server.
+tags: dotnet, csharp, database, postgres
 cover_image:
 canonical_url:
 ---
@@ -28,11 +28,12 @@ POSTING NOTES — delete this block before publishing.
   Opening comment for both — lead with the honest limitation, it earns
   more goodwill than a feature list:
 
-    "Two providers so far, SQL Server and SQLite, and I only list a
-     provider once the shared conformance suite passes against a real
-     running instance of it. Postgres and MySQL are designed but not
-     written. Happy to answer anything about the capability model — it
-     is the part I am least sure I got right."
+    "Three providers — SQL Server, PostgreSQL and SQLite — and I only
+     list one once the shared conformance suite passes against a real
+     running instance of that database. MySQL is designed but not
+     written. Happy to answer anything about the capability model; it
+     is the part I am least sure I got right, and the Postgres provider
+     is what tested whether it actually holds."
 
   Then delete this file from the repo.
 -->
@@ -144,6 +145,7 @@ It's a trap, and this table is why:
 | | SQL Server | SQLite | PostgreSQL | MySQL |
 |---|---|---|---|---|
 | Granularity | table + changed keys | **whole database** | table + full row | table + full row |
+| Delivery | polled | polled | **pushed on commit** | pushed |
 | Survives app restart | yes | **no** | yes | yes |
 | Survives downtime | within retention | **no** | yes | within retention |
 | Setup required | `ALTER DATABASE` | **none** | `wal_level=logical` | `binlog_format=ROW` |
@@ -216,13 +218,69 @@ the tests **skip visibly** rather than passing vacuously — because a green tic
 nothing is exactly how a README ends up claiming four databases and shipping one.
 
 SQLite polls one integer and can only say "something changed." SQL Server queries change
-tables and names individual rows with insert/update/delete. **Both pass the identical suite
-with no exemptions.** That's the evidence the contract holds.
+tables and names individual rows. PostgreSQL holds a replication connection open, is pushed
+each transaction as it commits, and reports every column before and after. **All three pass
+the identical suite with no exemptions.** That's the evidence the contract holds.
+
+The third one is the one that actually tested it. Two polling providers passing the same
+tests proves less than it looks like — they have the same shape. A *streaming* provider
+satisfying the same unmodified contract is what tells you the abstraction wasn't quietly
+built around polling.
 
 Measured detection latency on SQL Server: **262ms against a 250ms poll interval** — about
 12ms of library overhead. There's a permanent test asserting that, so if anyone later adds
 per-change work that pushes it into seconds, it fails rather than being noticed by a human
 watching a console.
+
+## The provider that tried to prove me wrong
+
+With two providers, "the abstraction is sound" was really "the abstraction fits two things
+that work the same way." Both polled. Both said *something changed, go look.* Nothing had
+tested the parts of the contract written for a database that pushes.
+
+PostgreSQL logical replication is the opposite shape in every respect. The server streams
+each transaction as it commits. It carries **every column, before and after** — including
+the whole row for a `DELETE`, which no polling provider can give you, because by the time
+you go and look the row is gone. And a replication slot retains changes on the server while
+your app is offline, so downtime survival is real rather than best-effort.
+
+It passed the conformance suite with no exemptions. That was the result I wanted.
+
+**It also broke in four ways I would have shipped.**
+
+Before writing it, I found a hole in my own test suite. Every detail check was written as
+`if (detail < tier) assert nothing at that tier`. That catches a provider claiming *more*
+than it delivers — but a provider claiming the **top** tier skips every branch and is
+therefore asserted against by *nothing at all*. A feed declaring `RowImages` could have
+returned empty rows forever and passed all six tests.
+
+I added the positive direction. The next three bugs are the ones it caught:
+
+**`Checkpoint.Now` replayed history.** Postgres's slot is a backlog by design, so resuming
+"at the slot" means resuming at the oldest thing it still holds. A caller asking for *now*
+got an arbitrary amount of the past. It reads the server's current WAL position instead.
+
+**Every value came back as a string.** pgoutput defaults to text mode, so an integer column
+arrived as `"10"`. That satisfies every structural assertion — it's non-null, it's the right
+column, the test is green — and breaks the first consumer that does arithmetic on it. One
+flag fixes it. Nothing but a typed assertion would ever have found it.
+
+**The primary key was the entire row.** To get before-images you must set `REPLICA IDENTITY
+FULL`, and under that setting Postgres marks *every* column as part of the replica identity.
+So the "changed row's key" contained all of it. On a two-column demo table you'd never
+notice; on a real one, code reading `Values[0]` gets the right answer by luck.
+
+None of the three are exotic. All three are the kind that pass review, pass a mocked test,
+and surface as someone else's incident months later. They were caught because the suite ran
+against a real PostgreSQL rather than a fake — which is the same reason the project's rule
+is that a provider isn't listed until it does.
+
+Two costs worth stating plainly, because I'd rather you read them here than discover them:
+`REPLICA IDENTITY FULL` writes every column of every `UPDATE` into the WAL, which is a real
+write-throughput tax on wide tables. And an abandoned replication slot retains WAL
+**indefinitely** and will eventually fill the disk — that's the same mechanism that makes
+downtime survivable, pointed the wrong way. One slot per application, and drop it when the
+application is retired.
 
 ## Back to the scheduling app
 
@@ -249,7 +307,7 @@ table produces no error. Just a screen that never updates. Which is the bug I st
 [**DbSignal**](https://github.com/rahibkhan44/DbSignal) — MIT, on NuGet.
 
 ```bash
-dotnet add package DbSignal.SqlServer   # or DbSignal.Sqlite
+dotnet add package DbSignal.SqlServer     # or DbSignal.PostgreSql, or DbSignal.Sqlite
 ```
 
 ```csharp
@@ -263,11 +321,30 @@ await foreach (var batch in feed.ReadAsync(Checkpoint.Now, ct))
             Console.WriteLine($"{key.Kind} row {key.Values[0]} in {table.QualifiedName}");
 ```
 
-**Two providers, both proven.** SQL Server and SQLite. PostgreSQL and MySQL are designed
-and not written — and they stay off the list until the conformance suite passes against a
-real running instance of each.
+On PostgreSQL the same loop gives you the values, not just the keys:
 
-Two proven beats four promised. I learned that from someone else's README.
+```csharp
+await using var feed = PostgreSqlFeed.For(connectionString)
+                                     .Watch("public.products")
+                                     .Build();
+
+await foreach (var batch in feed.ReadAsync(Checkpoint.Now, ct))
+    foreach (var table in batch.Tables)
+        foreach (var row in table.Rows)
+            Console.WriteLine($"{row.Kind}: {row.Before?["name"]} -> {row.After?["name"]}");
+```
+
+```
+Insert:  -> Widget
+Update: Widget -> Widget Mk II
+Delete: Widget Mk II ->
+```
+
+**Three providers, all proven.** SQL Server, PostgreSQL and SQLite. MySQL is designed and
+not written — and it stays off the list until the conformance suite passes against a real
+running instance of it.
+
+Three proven beats four promised. I learned that from someone else's README.
 
 ---
 
@@ -277,3 +354,9 @@ Two proven beats four promised. I learned that from someone else's README.
   across these mechanisms and claiming it would be untrue.
 - No EF Core dependency anywhere — Dapper and raw ADO work fine.
 - One package per provider. Install SQLite support, get a SQLite driver. Nothing else.
+- CI runs the suite against real databases on every push: LocalDB on a Windows job,
+  `postgres:17` on a Linux one. Where a database isn't present the tests **skip visibly**
+  rather than passing quietly, so a green build never means "we tested nothing."
+
+If you try it and it breaks, please open an issue. The one external bug report this has had
+so far was worth more than every download counter on the page.
