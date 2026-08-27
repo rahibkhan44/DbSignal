@@ -101,6 +101,5 @@ jobs:
             notes="Published to nuget.org. See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)."
           fi
 
-          printf '%s
-' "$notes" > release-notes.md
+          echo "$notes" > release-notes.md
           gh release create "v$VERSION" --title "$VERSION" --notes-file release-notes.md --latest
