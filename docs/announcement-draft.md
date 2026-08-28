@@ -1,41 +1,38 @@
 ---
 title: Your app doesn't know when another program changed your database
-published: false
+published: true
 description: Every database can already tell you when something changed. .NET had no unified way to ask. Here is what I found when I went looking, what I built instead, and the four bugs that only showed up when I ran it against a real server.
 tags: dotnet, csharp, database, postgres
 cover_image:
-canonical_url:
+canonical_url: https://dev.to/rahib_khan/your-app-doesnt-know-when-another-program-changed-your-database-6nc
 ---
 
 <!--
-POSTING NOTES — delete this block before publishing.
+STATUS — this is LIVE, not a draft.
 
-  1. Set `published: true` when ready.
-  2. Add a cover image, and ideally a GIF of the before/after near the top:
-     a grid that does not update on an external INSERT, then the same
-     INSERT updating it. That single image is worth more than any
-     paragraph here.
-  3. dev.to allows 4 tags maximum; the four above are chosen.
-  4. If cross-posting, publish on your own blog first and set
-     canonical_url so the original gets the search credit.
+  Published at:
+    https://dev.to/rahib_khan/your-app-doesnt-know-when-another-program-changed-your-database-6nc
+
+  The post originally went up 2026-08-11 as a 152-word summary. The full
+  2,500-word version was pushed over it on 2026-08-27 via the dev.to API,
+  keeping the same article id (4365543) so the URL and the existing comment
+  thread survived. That thread is the whole reason not to start a new post:
+  it carries the at-least-once bug report that became 1.0.1.
+
+  This file is now the SOURCE for that article. To change the post, edit
+  here and PUT body_markdown to /api/articles/4365543 — do not edit only
+  on dev.to, or the two drift apart.
+
+  Still to do, and each needs a human:
+    - a cover image, ideally a GIF: a grid that does NOT update on an
+      external INSERT, then the same INSERT updating it
+    - r/dotnet and Show HN cross-posts (text in docs/distribution-playbook.md)
 
   Cross-post titles:
     r/dotnet   Your app doesn't know when another program changed your
                database — so I wrote the library that tells it
     HN         Show HN: DbSignal – database change notification for .NET,
                without Kafka
-
-  Opening comment for both — lead with the honest limitation, it earns
-  more goodwill than a feature list:
-
-    "Three providers — SQL Server, PostgreSQL and SQLite — and I only
-     list one once the shared conformance suite passes against a real
-     running instance of that database. MySQL is designed but not
-     written. Happy to answer anything about the capability model; it
-     is the part I am least sure I got right, and the Postgres provider
-     is what tested whether it actually holds."
-
-  Then delete this file from the repo.
 -->
 
 There's a bug in almost every line-of-business app I've worked on, and most teams never
